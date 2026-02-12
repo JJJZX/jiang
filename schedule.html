@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>寒假学习计划</title>
+    <!-- Tailwind CSS v3 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3b82f6',
+                        secondary: '#10b981',
+                        warning: '#f59e0b',
+                        danger: '#ef4444',
+                        light: '#f3f4f6',
+                        dark: '#1f2937'
+                    }
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .task-completed {
+                @apply line-through text-gray-500 bg-green-50;
+            }
+            .task-pending {
+                @apply bg-white;
+            }
+            .calendar-day {
+                @apply w-16 h-16 flex flex-col items-center justify-center rounded-full cursor-pointer transition-all;
+            }
+            .calendar-day-active {
+                @apply bg-primary text-white ring-4 ring-primary/20;
+            }
+            .calendar-day-has-tasks {
+                @apply border-2 border-primary;
+            }
+            .calendar-day-completed {
+                @apply bg-secondary text-white;
+            }
+            .task-card {
+                @apply p-3 rounded-lg border border-gray-200 shadow-sm transition-all duration-200 hover:shadow-md;
+            }
+            .subject-tag {
+                @apply text-xs px-2 py-1 rounded-full font-medium;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8 max-w-6xl">
+        <!-- 头部标题 -->
+        <header class="mb-8 text-center">
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-800 mb-2">寒假学习计划</h1>
+            <p class="text-gray-600">合理安排时间，高效完成作业，度过充实的寒假！</p>
+        </header>
+
+        <!-- 日历视图模块 -->
+        <div class="mb-8">
+            <div class="bg-white rounded-xl shadow-md p-5">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">日程安排</h2>
+                <div class="calendar-container">
+                    
+                    <div id="calendar-days" class="grid grid-cols-7 gap-3">
+                        <!-- 日历天数将通过JavaScript动态生成 -->
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <div class="flex items-center justify-between text-sm text-gray-600 mb-2">
+                        <div class="flex items-center">
+                            <span class="w-3 h-3 bg-primary rounded-full mr-2"></span>
+                            <span>当前日期</span>
+                        </div>
+                        <div class="flex items-center">
+                            <span class="w-3 h-3 bg-secondary rounded-full mr-2"></span>
+                            <span>已完成</span>
+                        </div>
+                        <div class="flex items-center">
+                            <span class="w-3 h-3 border-2 border-primary rounded-full mr-2"></span>
+                            <span>有任务</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 今日任务模块 -->
+        <div class="mb-8">
+            <div class="bg-white rounded-xl shadow-md p-5">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold text-gray-800">今日任务</h2>
+                    <div class="flex items-center">
+                        <span id="current-date" class="text-lg font-medium text-gray-600">2026年2月12日 (Day1)</span>
+                        <button id="refresh-btn" class="ml-3 p-2 rounded-full hover:bg-gray-100">
+                            <i class="fa fa-refresh text-gray-600"></i>
+                        </button>
+                    </div>
+                </div>
+                <div id="today-tasks" class="space-y-3">
+                    <!-- 今日任务将通过JavaScript动态生成 -->
+                </div>
+            </div>
+        </div>
+
+        <!-- 学科进度模块 -->
+        <div class="mb-8">
+            <div class="bg-white rounded-xl shadow-md p-5">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">学科进度</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div id="subjects-progress" class="space-y-4">
+                        <!-- 学科进度将通过JavaScript动态生成 -->
+                    </div>
+                    <div>
+                        <canvas id="progress-chart" width="400" height="200"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 详细计划视图 -->
+        <div class="mt-8">
+            <div class="bg-white rounded-xl shadow-md p-5">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold text-gray-800">详细学习计划</h2>
+                    <div class="flex space-x-2">
+                        <button id="view-all" class="px-3 py-1 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90">
+                            全部
+                        </button>
+                        <div class="relative">
+                            <button id="filter-subject" class="px-3 py-1 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 flex items-center">
+                                学科筛选
+                                <i class="fa fa-chevron-down ml-2 text-xs"></i>
+                            </button>
+                            <div id="subject-dropdown" class="absolute right-0 mt-2 w-40 bg-white rounded-lg shadow-lg z-10 hidden">
+                                <div class="py-1" id="subject-options">
+                                    <!-- 学科选项将通过JavaScript动态生成 -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div id="detailed-schedule" class="space-y-6">
+                    <!-- 详细计划将通过JavaScript动态生成 -->
+                </div>
+            </div>
+        </div>
+
+        <!-- 底部信息 -->
+        <footer class="mt-8 text-center text-gray-500 text-sm">
+            <p>寒假学习计划应用 &copy; 2026</p>
+            <p class="mt-1">坚持每天进步一点点！</p>
+        </footer>
+    </div>
+
+    <script>
+        // 学科数据模型
+        const subjects = [
+            { id: 'chinese', name: '语文', color: '#3b82f6' },
+            { id: 'math', name: '数学', color: '#10b981' },
+            { id: 'english', name: '英语', color: '#f59e0b' },
+            { id: 'physics', name: '物理', color: '#ef4444' },
+            { id: 'chemistry', name: '化学', color: '#8b5cf6' },
+            { id: 'biology', name: '生物', color: '#ec4899' }
+        ];
+
+        // 任务数据模型
+        const tasks = {
+            chinese: [
+                { id: 'ciyan', name: '文言字词学案', total: 24, unit: '个', completed: 0, details: '每天2个，共12天' },
+                { id: 'beibei', name: '高考必背篇目', total: 60, unit: '篇', completed: 0, daily: true, dailyAmount: 5, details: '每天5篇，共12天' }
+            ],
+            math: [
+                { id: 'zonghe', name: '综合卷', total: 2, unit: '份', completed: 0 },
+                { id: 'litijihe', name: '立体几何练习', total: 9, unit: '节', completed: 0 }
+            ],
+            english: [
+                { id: 'cihui', name: '词汇练习', total: 16, unit: '单元', completed: 0, details: '必修一6个单元，必修二5个单元，必修三5个单元' },
+                { id: 'yuedu', name: '阅读', total: 48, unit: '篇', completed: 0, daily: true, dailyAmount: 4, details: '每天4篇，共12天' },
+                { id: 'haocihaoju', name: '背诵好词好句', total: 12, unit: '天', completed: 0, daily: true, dailyAmount: 1, details: '每天1次，共12天' }
+            ],
+            physics: [
+                { id: 'zonghe', name: '综合卷', total: 2, unit: '份', completed: 0 },
+                { id: 'fuxunlian', name: '阶段复习训练', total: 5, unit: '节', completed: 0, details: '第1-5节' }
+            ],
+            chemistry: [
+                { id: 'zonghe', name: '综合卷', total: 1, unit: '份', completed: 0 },
+                { id: 'gaokao', name: '高考卷', total: 4, unit: '份', completed: 0 },
+                { id: 'xiaoben', name: '小本练习', total: 4, unit: '页', completed: 0, details: '535-538页' }
+            ],
+            biology: [
+                { id: 'daliben', name: '一轮复习大本', total: 10, unit: '讲', completed: 0 },
+                { id: 'xiaoben', name: '一轮复习小本', total: 9, unit: '讲', completed: 0 },
+                { id: 'zonghe', name: '综合卷', total: 2, unit: '份', completed: 0 }
+            ]
+        };
+
+        // 生成12天的日期
+        const startDate = new Date('2026-02-12'); // 寒假从2026年2月12日开始
+        const days = Array.from({ length: 12 }, (_, i) => {
+            const date = new Date(startDate);
+            date.setDate(startDate.getDate() + i);
+            return {
+                day: i + 1,
+                date: date,
+                dateString: date.toISOString().split('T')[0],
+                tasks: []
+            };
+        });
+
+        // 时间段配置
+        const timeSlots = {
+            morning: ['08:00-09:30', '09:40-11:10'],
+            afternoon: ['14:00-15:30', '15:40-17:10'],
+            evening: ['19:00-20:30']
+        };
+
+        // 学科时间段分配
+        const subjectTimeSlots = {
+            chinese: timeSlots.morning[0],
+            math: timeSlots.morning[1],
+            english: timeSlots.afternoon[0],
+            physics: timeSlots.afternoon[1],
+            chemistry: timeSlots.evening,
+            biology: timeSlots.evening
+        };
+
+        // 手动创建日程安排
+        function createSchedule() {
+            // 为每天添加可选的英语听力练习
+            function addOptionalListeningTask(dayTasks, dayIndex) {
+                dayTasks.push({
+                    id: `english-tingli-${dayIndex + 1}`,
+                    subjectId: 'english',
+                    taskId: 'tingli',
+                    content: '英语听力练习（可选）',
+                    timeSlot: '20:40-21:10',
+                    completed: false,
+                    amount: 1,
+                    optional: true
+                });
+            }
+
+            // Day 1 (2月12日) - 化学高考卷第1份
+            days[0].tasks = [
+                { id: 'chinese-ciyan-1', subjectId: 'chinese', taskId: 'ciyan', content: '完成2个文言字词学案', timeSlot: '08:00-09:30', completed: false, amount: 2 },
+                { id: 'chinese-beibei-1', subjectId: 'chinese', taskId: 'beibei', content: '背诵5篇高考必背篇目', timeSlot: '14:00-15:00', completed: false, amount: 5 },
+                { id: 'math-zonghe-1', subjectId: 'math', taskId: 'zonghe', content: '完成1份综合卷', timeSlot: '09:40-11:10', completed: false, amount: 1 },
+                { id: 'english-cihui-1', subjectId: 'english', taskId: 'cihui', content: '完成必修一第1单元词汇练习', timeSlot: '15:10-16:10', completed: false, amount: 1 },
+                { id: 'english-yuedu-1', subjectId: 'english', taskId: 'yuedu', content: '完成4篇阅读', timeSlot: '16:20-17:20', completed: false, amount: 4 },
+                { id: 'english-haocihaoju-1', subjectId: 'english', taskId: 'haocihaoju', content: '背诵好词好句', timeSlot: '19:00-19:30', completed: false, amount: 1 },
+                { id: 'chemistry-gaokao-1', subjectId: 'chemistry', taskId: 'gaokao', content: '完成第1份高考卷', timeSlot: '19:40-20:40', completed: false, amount: 1 }
+            ];
+            addOptionalListeningTask(days[0].tasks, 0);
+
+            // Day 2 (2月13日) - 数学立体几何第1节
+            days[1].tasks = [
+                { id: 'chinese-ciyan-2', subjectId: 'chinese', taskId: 'ciyan', content: '完成2个文言字词学案', timeSlot: '08:00-09:30', completed: false, amount: 2 },
+                { id: 'chinese-beibei-2', subjectId: 'chinese', taskId: 'beibei', content: '背诵5篇高考必背篇目', timeSlot: '14:00-15:00', completed: false, amount: 5 },
+                { id: 'math-litijihe-1', subjectId: 'math', taskId: 'litijihe', content: '完成立体几何第1节练习', timeSlot: '09:40-11:10', completed: false, amount: 1 },
+                { id: 'physics-zonghe-1', subjectId: 'physics', taskId: 'zonghe', content: '完成1份综合卷', timeSlot: '15:10-16:40', completed: false, amount: 1 },
+                { id: 'english-cihui-2', subjectId: 'english', taskId: 'cihui', content: '完成必修一第2单元词汇练习', timeSlot: '16:50-17:50', completed: false, amount: 1 },
+                { id: 'english-yuedu-2', subjectId: 'english', taskId: 'yuedu', content: '完成4篇阅读', timeSlot: '19:00-20:00', completed: false, amount: 4 },
+                { id: 'english-haocihaoju-2', subjectId: 'english', taskId: 'haocihaoju', content: '背诵好词好句', timeSlot: '20:10-20:40', completed: false, amount: 1 }
+            ];
+            addOptionalListeningTask(days[1].tasks, 1);
+
+            // Day 3 (2月14日)
+            days[2].tasks = [
+                { id: 'chinese-ciyan-3', subjectId: 'chinese', taskId: 'ciyan', content: '完成2个文言字词学案', timeSlot: '08:00-09:30', completed: false, amount: 2 },
+                { id: 'chinese-beibei-3', subjectId: 'chinese', taskId: 'beibei', content: '背诵5篇高考必背篇目', timeSlot: '14:00-15:00', completed: false, amount: 5 },
+                { id: 'math-litijihe-2', subjectId: 'math', taskId: 'litijihe', content: '完成立体几何第2节练习', timeSlot: '09:40-11:10', completed: false, amount: 1 },
+                { id: 'chemistry-zonghe-1', subjectId: 'chemistry', taskId: 'zonghe', content: '完成1份综合卷', timeSlot: '15:10-16:40', completed: false, amount: 1 },
+                { id: 'english-cihui-3', subjectId: 'english', taskId: 'cihui', content: '完成必修一第3单元词汇练习', timeSlot: '16:50-17:50', completed: false, amount: 1 },
+                { id: 'english-yuedu-3', subjectId: 'english', taskId: 'yuedu', content: '完成4篇阅读', timeSlot: '19:00-20:00', completed: false, amount: 4 },
+                { id: 'english-haocihaoju-3', subjectId: 'english', taskId: 'haocihaoju', content: '背诵好词好句', timeSlot: '20:10-20:40', completed: false, amount: 1 }
+            ];
+            addOptionalListeningTask(days[2].tasks, 2);
+
+            // Day 4 (2月15日) - 化学高考卷第2份
+            days[3].tasks = [
+                { id: 'chinese-ciyan-4', subjectId: 'chinese', taskId: 'ciyan', content: '完成2个文言字词学案', timeSlot: '08:00-09:30', completed: false, amount: 2 },
+                { id: 'chinese-beibei-4', subjectId: 'chinese', taskId: 'beibei', content: '背诵5篇高考必背篇目', timeSlot: '14:00-15:00', completed: false, amount: 5 },
+                { id: 'math-litijihe-3', subjectId: 'math', taskId: 'litijihe', content: '完成立体几何第3节练习', timeSlot: '09:40-11:10', completed: false, amount: 1 },
+                { id: 'physics-fuxunlian-1', subjectId: 'physics', taskId: 'fuxunlian', content: '完成第1节阶段复习训练', timeSlot: '15:10-16:10', completed: false, amount: 1 },
+                { id: 'english-cihui-4', subjectId: 'english', taskId: 'cihui', content: '完成必修一第4单元词汇练习', timeSlot: '16:20-17:20', completed: false, amount: 1 },
+                { id: 'english-yuedu-4', subjectId: 'english', taskId: 'yuedu', content: '完成4篇阅读', timeSlot: '19:00-19:30', completed: false, amount: 4 },
+                { id: 'english-haocihaoju-4', subjectId: 'english', taskId: 'haocihaoju', content: '背诵好词好句', timeSlot: '19:30-20:00', completed: false, amount: 1 },
+                { id: 'chemistry-gaokao-2', subjectId: 'chemistry', taskId: 'gaokao', content: '完成第2份高考卷', timeSlot: '20:00-21:00', completed: false, amount: 1 }
+            ];
+            addOptionalListeningTask(days[3].tasks, 3);
+
+            // Day 5 (2月16日)
+            days[4].tasks = [
+                { id: 'chinese-ciyan-5', subjectId: 'chinese', taskId: 'ciyan', content: '完成2个文言字词学案', timeSlot: '08:00-09:30', completed: false, amount: 2 },
+                { id: 'chinese-beibei-5', subjectId: 'chinese', taskId: 'beibei', content: '背诵5篇高考必背篇目', timeSlot: '14:00-15:00', completed: false, amount: 5 },
+                { id: 'math-litijihe-4', subjectId: 'math', taskId: 'litijihe', content: '完成立体几何第4节练习', timeSlot: '09:40-11:10', completed: false, amount: 1 },
+                { id: 'biology-daliben-1', subjectId: 'biology', taskId: 'daliben', content: '完成第5讲一轮复习大本', timeSlot: '15:10-16:10', completed: false, amount: 1 },
+                { id: 'english-cihui-5', subjectId: 'english', taskId: 'cihui', content: '完成必修一第5单元词汇练习', timeSlot: '16:20-17:20', completed: false, amount: 1 },
+                { id: 'english-yuedu-5', subjectId: 'english', taskId: 'yuedu', content: '完成4篇阅读', timeSlot: '19:00-20:00', completed: false, amount: 4 },
+                { id: 'english-haocihaoju-5', subjectId: 'english', taskId: 'haocihaoju', content: '背诵好词好句', timeSlot: '20:10-20:40', completed: false, amount: 1 }
+            ];
+            addOptionalListeningTask(days[4].tasks, 4);
+
+            // Day 6 (2月17日) - 化学高考卷第3份
+            days[5].tasks = [
+                { id: 'chinese-ciyan-6', subjectId: 'chinese', taskId: 'ciyan', content: '完成2个文言字词学案', timeSlot: '08:00-09:30', completed: false, amount: 2 },
+                { id: 'chinese-beibei-6', subjectId: 'chinese', taskId: 'beibei', content: '背诵5篇高考必背篇目', timeSlot: '14:00-15:00', completed: false, amount: 5 },
+                { id: 'math-litijihe-5', subjectId: 'math', taskId: 'litijihe', content: '完成立体几何第5节练习', timeSlot: '09:40-11:10', completed: false, amount: 1 },
+                { id: 'physics-fuxunlian-2', subjectId: 'physics', taskId: 'fuxunlian', content: '完成第2节阶段复习训练', timeSlot: '15:10-16:10', completed: false, amount: 1 },
+                { id: 'english-cihui-6', subjectId: 'english', taskId: 'cihui', content: '完成必修一第6单元词汇练习', timeSlot: '16:20-17:20', completed: false, amount: 1 },
+                { id: 'english-yuedu-6', subjectId: 'english', taskId: 'yuedu', content: '完成4篇阅读', timeSlot: '19:00-19:30', completed: false, amount: 4 },
+                { id: 'english-haocihaoju-6', subjectId: 'english', taskId: 'haocihaoju', content: '背诵好词好句', timeSlot: '19:30-20:00', completed: false, amount: 1 },
+                { id: 'chemistry-gaokao-3', subjectId: 'chemistry', taskId: 'gaokao', content: '完成第3份高考卷', timeSlot: '20:00-21:00', completed: false, amount: 1 }
+            ];
+            addOptionalListeningTask(days[5].tasks, 5);
+
+            // Day 7 (2月18日)
+            days[6].tasks = [
+                { id: 'chinese-ciyan-7', subjectId: 'chinese', taskId: 'ciyan', content: '完成2个文言字词学案', timeSlot: '08:00-09:30', completed: false, amount: 2 },
+                { id: 'chinese-beibei-7', subjectId: 'chinese', taskId: 'beibei', content: '背诵5篇高考必背篇目', timeSlot: '14:00-15:00', completed: false, amount: 5 },
+                { id: 'math-zonghe-2', subjectId: 'math', taskId: 'zonghe', content: '完成1份综合卷', timeSlot: '09:40-11:10', completed: false, amount: 1 },
+                { id: 'biology-daliben-2', subjectId: 'biology', taskId: 'daliben', content: '完成第8讲一轮复习大本', timeSlot: '15:10-16:10', completed: false, amount: 1 },
+                { id: 'english-cihui-7', subjectId: 'english', taskId: 'cihui', content: '完成必修二第1单元词汇练习', timeSlot: '16:20-17:20', completed: false, amount: 1 },
+                { id: 'english-yuedu-7', subjectId: 'english', taskId: 'yuedu', content: '完成4篇阅读', timeSlot: '19:00-20:00', completed: false, amount: 4 },
+                { id: 'english-haocihaoju-7', subjectId: 'english', taskId: 'haocihaoju', content: '背诵好词好句', timeSlot: '20:10-20:40', completed: false, amount: 1 }
+            ];
+            addOptionalListeningTask(days[6].tasks, 6);
+
+            // Day 8 (2月19日) - 化学高考卷第4份
+            days[7].tasks = [
+                { id: 'chinese-ciyan-8', subjectId: 'chinese', taskId: 'ciyan', content: '完成2个文言字词学案', timeSlot: '08:00-09:30', completed: false, amount: 2 },
+                { id: 'chinese-beibei-8', subjectId: 'chinese', taskId: 'beibei', content: '背诵5篇高考必背篇目', timeSlot: '14:00-15:00', completed: false, amount: 5 },
+                { id: 'math-litijihe-6', subjectId: 'math', taskId: 'litijihe', content: '完成立体几何第6节练习', timeSlot: '09:40-11:10', completed: false, amount: 1 },
+                { id: 'physics-fuxunlian-3', subjectId: 'physics', taskId: 'fuxunlian', content: '完成第3节阶段复习训练', timeSlot: '15:10-16:10', completed: false, amount: 1 },
+                { id: 'english-cihui-8', subjectId: 'english', taskId: 'cihui', content: '完成必修二第2单元词汇练习', timeSlot: '16:20-17:20', completed: false, amount: 1 },
+                { id: 'english-yuedu-8', subjectId: 'english', taskId: 'yuedu', content: '完成4篇阅读', timeSlot: '19:00-19:30', completed: false, amount: 4 },
+                { id: 'english-haocihaoju-8', subjectId: 'english', taskId: 'haocihaoju', content: '背诵好词好句', timeSlot: '19:30-20:00', completed: false, amount: 1 },
+                { id: 'chemistry-gaokao-4', subjectId: 'chemistry', taskId: 'gaokao', content: '完成第4份高考卷', timeSlot: '20:00-21:00', completed: false, amount: 1 }
+            ];
+            addOptionalListeningTask(days[7].tasks, 7);
+
+            // Day 9 (2月20日)
+            days[8].tasks = [
+                { id: 'chinese-ciyan-9', subjectId: 'chinese', taskId: 'ciyan', content: '完成2个文言字词学案', timeSlot: '08:00-09:30', completed: false, amount: 2 },
+                { id: 'chinese-beibei-9', subjectId: 'chinese', taskId: 'beibei', content: '背诵5篇高考必背篇目', timeSlot: '14:00-15:00', completed: false, amount: 5 },
+                { id: 'math-litijihe-7', subjectId: 'math', taskId: 'litijihe', content: '完成立体几何第7节练习', timeSlot: '09:40-11:10', completed: false, amount: 1 },
+                { id: 'physics-fuxunlian-4', subjectId: 'physics', taskId: 'fuxunlian', content: '完成第4节阶段复习训练', timeSlot: '15:10-16:10', completed: false, amount: 1 },
+                { id: 'biology-daliben-3', subjectId: 'biology', taskId: 'daliben', content: '完成第9讲一轮复习大本', timeSlot: '16:20-17:20', completed: false, amount: 1 },
+                { id: 'english-cihui-9', subjectId: 'english', taskId: 'cihui', content: '完成必修二第3单元词汇练习', timeSlot: '19:00-20:00', completed: false, amount: 1 },
+                { id: 'english-yuedu-9', subjectId: 'english', taskId: 'yuedu', content: '完成4篇阅读', timeSlot: '20:10-20:40', completed: false, amount: 4 },
+                { id: 'english-haocihaoju-9', subjectId: 'english', taskId: 'haocihaoju', content: '背诵好词好句', timeSlot: '20:40-21:10', completed: false, amount: 1 }
+            ];
+            addOptionalListeningTask(days[8].tasks, 8);
+
+            // Day 10 (2月21日) - 生物综合卷第1份
+            days[9].tasks = [
+                { id: 'chinese-ciyan-10', subjectId: 'chinese', taskId: 'ciyan', content: '完成2个文言字词学案', timeSlot: '08:00-09:30', completed: false, amount: 2 },
+                { id: 'chinese-beibei-10', subjectId: 'chinese', taskId: 'beibei', content: '背诵5篇高考必背篇目', timeSlot: '14:00-15:00', completed: false, amount: 5 },
+                { id: 'math-litijihe-8', subjectId: 'math', taskId: 'litijihe', content: '完成立体几何第8节练习', timeSlot: '09:40-11:10', completed: false, amount: 1 },
+                { id: 'physics-fuxunlian-5', subjectId: 'physics', taskId: 'fuxunlian', content: '完成第5节阶段复习训练', timeSlot: '15:10-16:10', completed: false, amount: 1 },
+                { id: 'english-cihui-10', subjectId: 'english', taskId: 'cihui', content: '完成必修二第4单元词汇练习', timeSlot: '16:20-17:20', completed: false, amount: 1 },
+                { id: 'english-yuedu-10', subjectId: 'english', taskId: 'yuedu', content: '完成4篇阅读', timeSlot: '19:00-19:30', completed: false, amount: 4 },
+                { id: 'english-haocihaoju-10', subjectId: 'english', taskId: 'haocihaoju', content: '背诵好词好句', timeSlot: '19:30-20:00', completed: false, amount: 1 },
+                { id: 'biology-zonghe-1', subjectId: 'biology', taskId: 'zonghe', content: '完成第1份综合卷', timeSlot: '20:00-21:00', completed: false, amount: 1 }
+            ];
+            addOptionalListeningTask(days[9].tasks, 9);
+
+            // Day 11 (2月22日) - 生物综合卷第2份
+            days[10].tasks = [
+                { id: 'chinese-ciyan-11', subjectId: 'chinese', taskId: 'ciyan', content: '完成2个文言字词学案', timeSlot: '08:00-09:30', completed: false, amount: 2 },
+                { id: 'chinese-beibei-11', subjectId: 'chinese', taskId: 'beibei', content: '背诵5篇高考必背篇目', timeSlot: '14:00-15:00', completed: false, amount: 5 },
+                { id: 'math-litijihe-9', subjectId: 'math', taskId: 'litijihe', content: '完成立体几何第9节练习', timeSlot: '09:40-11:10', completed: false, amount: 1 },
+                { id: 'chemistry-xiaoben-1', subjectId: 'chemistry', taskId: 'xiaoben', content: '完成小本535页练习', timeSlot: '15:10-16:10', completed: false, amount: 1 },
+                { id: 'english-cihui-11', subjectId: 'english', taskId: 'cihui', content: '完成必修二第5单元词汇练习', timeSlot: '16:20-17:20', completed: false, amount: 1 },
+                { id: 'english-yuedu-11', subjectId: 'english', taskId: 'yuedu', content: '完成4篇阅读', timeSlot: '19:00-19:30', completed: false, amount: 4 },
+                { id: 'english-haocihaoju-11', subjectId: 'english', taskId: 'haocihaoju', content: '背诵好词好句', timeSlot: '19:30-20:00', completed: false, amount: 1 },
+                { id: 'biology-zonghe-2', subjectId: 'biology', taskId: 'zonghe', content: '完成第2份综合卷', timeSlot: '20:00-21:00', completed: false, amount: 1 }
+            ];
+            addOptionalListeningTask(days[10].tasks, 10);
+
+            // Day 12 (2月23日)
+            days[11].tasks = [
+                { id: 'chinese-ciyan-12', subjectId: 'chinese', taskId: 'ciyan', content: '完成2个文言字词学案', timeSlot: '08:00-09:30', completed: false, amount: 2 },
+                { id: 'chinese-beibei-12', subjectId: 'chinese', taskId: 'beibei', content: '背诵5篇高考必背篇目', timeSlot: '14:00-15:00', completed: false, amount: 5 },
+                { id: 'chemistry-xiaoben-2', subjectId: 'chemistry', taskId: 'xiaoben', content: '完成小本536页练习', timeSlot: '09:40-10:40', completed: false, amount: 1 },
+                { id: 'chemistry-xiaoben-3', subjectId: 'chemistry', taskId: 'xiaoben', content: '完成小本537页练习', timeSlot: '10:50-11:50', completed: false, amount: 1 },
+                { id: 'chemistry-xiaoben-4', subjectId: 'chemistry', taskId: 'xiaoben', content: '完成小本538页练习', timeSlot: '15:10-16:10', completed: false, amount: 1 },
+                { id: 'english-cihui-12', subjectId: 'english', taskId: 'cihui', content: '完成必修三第1单元词汇练习', timeSlot: '16:20-17:20', completed: false, amount: 1 },
+                { id: 'english-yuedu-12', subjectId: 'english', taskId: 'yuedu', content: '完成4篇阅读', timeSlot: '19:00-19:30', completed: false, amount: 4 },
+                { id: 'english-haocihaoju-12', subjectId: 'english', taskId: 'haocihaoju', content: '背诵好词好句', timeSlot: '19:30-20:00', completed: false, amount: 1 }
+            ];
+            addOptionalListeningTask(days[11].tasks, 11);
+
+            // 添加剩余的英语词汇练习任务（必修三第2-5单元）
+            const extraEnglishTasks = [
+                { id: 'english-cihui-extra1', subjectId: 'english', taskId: 'cihui', content: '完成必修三第2单元词汇练习', timeSlot: '17:30-18:30', completed: false, amount: 1 },
+                { id: 'english-cihui-extra2', subjectId: 'english', taskId: 'cihui', content: '完成必修三第3单元词汇练习', timeSlot: '17:30-18:30', completed: false, amount: 1 },
+                { id: 'english-cihui-extra3', subjectId: 'english', taskId: 'cihui', content: '完成必修三第4单元词汇练习', timeSlot: '17:30-18:30', completed: false, amount: 1 },
+                { id: 'english-cihui-extra4', subjectId: 'english', taskId: 'cihui', content: '完成必修三第5单元词汇练习', timeSlot: '17:30-18:30', completed: false, amount: 1 }
+            ];
+
+            // 添加剩余的生物一轮复习任务
+            const extraBiologyTasks = [
+                { id: 'biology-daliben-4', subjectId: 'biology', taskId: 'daliben', content: '完成第1讲一轮复习大本', timeSlot: '21:30-22:30', completed: false, amount: 1 },
+                { id: 'biology-daliben-5', subjectId: 'biology', taskId: 'daliben', content: '完成第2讲一轮复习大本', timeSlot: '21:30-22:30', completed: false, amount: 1 },
+                { id: 'biology-daliben-6', subjectId: 'biology', taskId: 'daliben', content: '完成第3讲一轮复习大本', timeSlot: '21:30-22:30', completed: false, amount: 1 },
+                { id: 'biology-daliben-7', subjectId: 'biology', taskId: 'daliben', content: '完成第4讲一轮复习大本', timeSlot: '21:30-22:30', completed: false, amount: 1 },
+                { id: 'biology-daliben-8', subjectId: 'biology', taskId: 'daliben', content: '完成第6讲一轮复习大本', timeSlot: '21:30-22:30', completed: false, amount: 1 },
+                { id: 'biology-daliben-9', subjectId: 'biology', taskId: 'daliben', content: '完成第7讲一轮复习大本', timeSlot: '21:30-22:30', completed: false, amount: 1 },
+                { id: 'biology-daliben-10', subjectId: 'biology', taskId: 'daliben', content: '完成第10讲一轮复习大本', timeSlot: '21:30-22:30', completed: false, amount: 1 }
+            ];
+
+            // 将剩余任务添加到任务量较少的天数
+            const daysWithLessTasks = [0, 1, 2, 3, 4, 5, 6, 7];
+            let englishTaskIndex = 0;
+            let biologyTaskIndex = 0;
+
+            daysWithLessTasks.forEach(dayIndex => {
+                // 每天最多添加2个额外任务
+                let addedTasks = 0;
+                
+                // 先添加英语任务
+                if (englishTaskIndex < extraEnglishTasks.length && addedTasks < 2) {
+                    days[dayIndex].tasks.push(extraEnglishTasks[englishTaskIndex]);
+                    englishTaskIndex++;
+                    addedTasks++;
+                }
+                
+                // 再添加生物任务
+                if (biologyTaskIndex < extraBiologyTasks.length && addedTasks < 2) {
+                    days[dayIndex].tasks.push(extraBiologyTasks[biologyTaskIndex]);
+                    biologyTaskIndex++;
+                    addedTasks++;
+                }
+            });
+
+            // 将剩余的生物小本任务添加到日程中
+            const biologyXiaobenTasks = [
+                { id: 'biology-xiaoben-1', subjectId: 'biology', taskId: 'xiaoben', content: '完成第1讲一轮复习小本', timeSlot: '21:30-22:30', completed: false, amount: 1 },
+                { id: 'biology-xiaoben-2', subjectId: 'biology', taskId: 'xiaoben', content: '完成第2讲一轮复习小本', timeSlot: '21:30-22:30', completed: false, amount: 1 },
+                { id: 'biology-xiaoben-3', subjectId: 'biology', taskId: 'xiaoben', content: '完成第3讲一轮复习小本', timeSlot: '21:30-22:30', completed: false, amount: 1 },
+                { id: 'biology-xiaoben-4', subjectId: 'biology', taskId: 'xiaoben', content: '完成第4讲一轮复习小本', timeSlot: '21:30-22:30', completed: false, amount: 1 },
+                { id: 'biology-xiaoben-5', subjectId: 'biology', taskId: 'xiaoben', content: '完成第5讲一轮复习小本', timeSlot: '21:30-22:30', completed: false, amount: 1 },
+                { id: 'biology-xiaoben-6', subjectId: 'biology', taskId: 'xiaoben', content: '完成第6讲一轮复习小本', timeSlot: '21:30-22:30', completed: false, amount: 1 },
+                { id: 'biology-xiaoben-7', subjectId: 'biology', taskId: 'xiaoben', content: '完成第7讲一轮复习小本', timeSlot: '21:30-22:30', completed: false, amount: 1 },
+                { id: 'biology-xiaoben-8', subjectId: 'biology', taskId: 'xiaoben', content: '完成第8讲一轮复习小本', timeSlot: '21:30-22:30', completed: false, amount: 1 },
+                { id: 'biology-xiaoben-9', subjectId: 'biology', taskId: 'xiaoben', content: '完成第9讲一轮复习小本', timeSlot: '21:30-22:30', completed: false, amount: 1 }
+            ];
+
+            // 将生物小本任务添加到所有天数中
+            days.forEach((day, index) => {
+                if (index < biologyXiaobenTasks.length) {
+                    day.tasks.push(biologyXiaobenTasks[index]);
+                }
+            });
+        }
+
+        // 当前选中的日期
+        let selectedDay = null;
+
+        // 更新日历视图
+        function updateCalendar() {
+            const calendarDays = document.getElementById('calendar-days');
+            calendarDays.innerHTML = '';
+            
+            const today = new Date();
+            const todayString = today.toISOString().split('T')[0];
+            
+            // 如果没有选中的日期，默认选中今天
+            if (!selectedDay) {
+                selectedDay = days.find(d => d.dateString === todayString) || days[0];
+            }
+            
+            days.forEach(day => {
+                const dayElement = document.createElement('div');
+                dayElement.className = 'calendar-day';
+                
+                const isToday = day.dateString === todayString;
+                const isSelected = day.day === selectedDay.day;
+                const hasTasks = day.tasks.length > 0;
+                const requiredTasks = day.tasks.filter(task => !task.optional);
+                const allCompleted = requiredTasks.length > 0 && requiredTasks.every(task => task.completed);
+                
+                if (isSelected) {
+                    dayElement.classList.add('calendar-day-active');
+                } else if (allCompleted) {
+                    dayElement.classList.add('calendar-day-completed');
+                } else if (hasTasks) {
+                    dayElement.classList.add('calendar-day-has-tasks');
+                }
+                
+                dayElement.innerHTML = `
+                    <span class="text-sm font-medium">${day.date.getDate()}</span>
+                    <span class="text-xs">Day${day.day}</span>
+                `;
+                
+                dayElement.addEventListener('click', () => {
+                    selectedDay = day;
+                    updateCalendar();
+                    showDayTasks(day);
+                });
+                
+                calendarDays.appendChild(dayElement);
+            });
+            
+            const currentDateElement = document.getElementById('current-date');
+            currentDateElement.textContent = `${selectedDay.date.getFullYear()}年${selectedDay.date.getMonth() + 1}月${selectedDay.date.getDate()}日 (Day${selectedDay.day})`;
+        }
+
+        // 显示指定日期的任务
+        function showDayTasks(day) {
+            const todayTasks = document.getElementById('today-tasks');
+            todayTasks.innerHTML = '';
+            
+            // 更新选中的日期
+            selectedDay = day;
+            
+            const currentDateElement = document.getElementById('current-date');
+            currentDateElement.textContent = `${day.date.getFullYear()}年${day.date.getMonth() + 1}月${day.date.getDate()}日 (Day${day.day})`;
+            
+            if (day.tasks.length === 0) {
+                todayTasks.innerHTML = `
+                    <div class="text-center py-6 text-gray-500">
+                        <i class="fa fa-check-circle text-4xl mb-2 text-green-500"></i>
+                        <p>今天没有安排任务，可以休息一下！</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            const sortedTasks = [...day.tasks].sort((a, b) => {
+                return a.timeSlot.localeCompare(b.timeSlot);
+            });
+            
+            sortedTasks.forEach(task => {
+                const subject = subjects.find(s => s.id === task.subjectId);
+                
+                const taskElement = document.createElement('div');
+                taskElement.className = `task-card ${task.completed ? 'task-completed' : 'task-pending'}`;
+                taskElement.innerHTML = `
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <input type="checkbox" id="${task.id}" class="task-checkbox h-5 w-5 rounded border-gray-300 text-primary focus:ring-primary" ${task.completed ? 'checked' : ''}>
+                        </div>
+                        <div class="ml-3 flex-grow">
+                            <div class="flex items-center justify-between">
+                                <p class="text-sm font-medium text-gray-900 ${task.optional ? 'italic' : ''}">${task.content}</p>
+                                <span class="subject-tag" style="background-color: ${subject.color}20; color: ${subject.color}">${subject.name}${task.optional ? ' (可选)' : ''}</span>
+                            </div>
+                            <div class="flex items-center mt-1">
+                                <span class="text-xs font-medium text-gray-500 mb-1"><i class="fa fa-clock-o mr-1"></i> ${task.timeSlot}</span>
+                                ${task.optional ? '<span class="text-xs text-gray-400 ml-2">(可选任务，不影响当日完成状态)</span>' : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                const checkbox = taskElement.querySelector('.task-checkbox');
+                checkbox.addEventListener('change', () => {
+                    toggleTaskCompletion(task);
+                });
+                
+                todayTasks.appendChild(taskElement);
+            });
+        }
+
+        // 保存数据到本地存储
+        function saveData() {
+            const dataToSave = {
+                tasks: tasks,
+                days: days
+            };
+            localStorage.setItem('winterStudyPlanData', JSON.stringify(dataToSave));
+        }
+
+        // 从本地存储加载数据
+        function loadData() {
+            const savedData = localStorage.getItem('winterStudyPlanData');
+            if (savedData) {
+                const parsedData = JSON.parse(savedData);
+                
+                // 恢复任务完成状态
+                if (parsedData.tasks) {
+                    Object.keys(parsedData.tasks).forEach(subjectId => {
+                        parsedData.tasks[subjectId].forEach(savedTask => {
+                            const task = tasks[subjectId].find(t => t.id === savedTask.id);
+                            if (task) {
+                                task.completed = savedTask.completed;
+                            }
+                        });
+                    });
+                }
+                
+                // 恢复每日任务完成状态
+                if (parsedData.days) {
+                    parsedData.days.forEach(savedDay => {
+                        const day = days.find(d => d.day === savedDay.day);
+                        if (day) {
+                            savedDay.tasks.forEach(savedTask => {
+                                const task = day.tasks.find(t => t.id === savedTask.id);
+                                if (task) {
+                                    task.completed = savedTask.completed;
+                                }
+                            });
+                        }
+                    });
+                }
+            }
+        }
+
+        // 切换任务完成状态
+        function toggleTaskCompletion(task) {
+            task.completed = !task.completed;
+            
+            const subjectTask = tasks[task.subjectId].find(t => t.id === task.taskId);
+            if (task.completed) {
+                subjectTask.completed += task.amount;
+            } else {
+                subjectTask.completed -= task.amount;
+            }
+            
+            updateCalendar();
+            updateTodayTasks();
+            updateSubjectsProgress();
+            updateDetailedSchedule();
+            updateProgressChart();
+            
+            // 保存数据到本地存储
+            saveData();
+        }
+
+        // 更新今日任务
+        function updateTodayTasks() {
+            const today = new Date();
+            const todayString = today.toISOString().split('T')[0];
+            const todayDay = days.find(d => d.dateString === todayString) || days[0];
+            
+            // 如果当前选中的是今天，则更新任务显示
+            if (selectedDay && selectedDay.dateString === todayString) {
+                showDayTasks(todayDay);
+            } else if (selectedDay) {
+                // 否则更新选中日期的任务显示
+                showDayTasks(selectedDay);
+            }
+        }
+
+        // 更新学科进度
+        function updateSubjectsProgress() {
+            const subjectsProgress = document.getElementById('subjects-progress');
+            subjectsProgress.innerHTML = '';
+            
+            subjects.forEach(subject => {
+                const subjectElement = document.createElement('div');
+                
+                let totalTasks = 0;
+                let completedTasks = 0;
+                
+                tasks[subject.id].forEach(task => {
+                    totalTasks += task.total;
+                    completedTasks += task.completed;
+                });
+                
+                const progressPercentage = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+                
+                subjectElement.innerHTML = `
+                    <div class="mb-1 flex justify-between items-center">
+                        <div class="flex items-center">
+                            <span class="w-3 h-3 rounded-full mr-2" style="background-color: ${subject.color}"></span>
+                            <span class="font-medium text-gray-700">${subject.name}</span>
+                        </div>
+                        <span class="text-sm text-gray-600">${completedTasks}/${totalTasks} (${progressPercentage}%)</span>
+                    </div>
+                    <div class="h-2 rounded-full overflow-hidden bg-gray-200">
+                        <div class="h-full transition-all duration-500 ease-out" style="width: ${progressPercentage}%; background-color: ${subject.color}"></div>
+                    </div>
+                `;
+                
+                subjectsProgress.appendChild(subjectElement);
+            });
+        }
+
+        // 更新详细计划视图
+        function updateDetailedSchedule(filterSubjectId = null) {
+            const detailedSchedule = document.getElementById('detailed-schedule');
+            detailedSchedule.innerHTML = '';
+            
+            days.forEach(day => {
+                let dayTasks = day.tasks;
+                if (filterSubjectId) {
+                    dayTasks = day.tasks.filter(task => task.subjectId === filterSubjectId);
+                    if (dayTasks.length === 0) return;
+                }
+                
+                const dayElement = document.createElement('div');
+                
+                const allCompleted = dayTasks.length > 0 && dayTasks.every(task => task.completed);
+                const anyCompleted = dayTasks.some(task => task.completed);
+                
+                dayElement.innerHTML = `
+                    <div class="mb-2 flex justify-between items-center">
+                        <h3 class="text-lg font-medium text-gray-800">
+                            Day${day.day} - ${day.date.getMonth() + 1}月${day.date.getDate()}日
+                            ${allCompleted ? '<span class="ml-2 text-green-500 text-sm"><i class="fa fa-check-circle"></i> 全部完成</span>' : ''}
+                        </h3>
+                        ${anyCompleted && !allCompleted ? `<span class="text-sm text-yellow-500"><i class="fa fa-clock-o"></i> 部分完成</span>` : ''}
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        ${dayTasks.map(task => {
+                            const subject = subjects.find(s => s.id === task.subjectId);
+                            return `
+                                <div class="task-card ${task.completed ? 'task-completed' : 'task-pending'}">
+                                    <div class="flex items-center">
+                                        <div class="flex-shrink-0">
+                                            <input type="checkbox" id="${task.id}" class="task-checkbox h-5 w-5 rounded border-gray-300 text-primary focus:ring-primary" ${task.completed ? 'checked' : ''}>
+                                        </div>
+                                        <div class="ml-3 flex-grow">
+                                            <div class="flex items-center justify-between">
+                                                <p class="text-sm font-medium text-gray-900">${task.content}</p>
+                                                <span class="subject-tag" style="background-color: ${subject.color}20; color: ${subject.color}">${subject.name}</span>
+                                            </div>
+                                            <div class="flex items-center mt-1">
+                                                <span class="text-xs font-medium text-gray-500 mb-1"><i class="fa fa-clock-o mr-1"></i> ${task.timeSlot}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                `;
+                
+                detailedSchedule.appendChild(dayElement);
+            });
+            
+            // 为详细计划视图中的任务复选框添加事件监听器
+            document.querySelectorAll('#detailed-schedule .task-checkbox').forEach(checkbox => {
+                checkbox.addEventListener('change', function() {
+                    const taskId = this.id;
+                    // 遍历所有日期找到对应的任务
+                    for (let day of days) {
+                        const task = day.tasks.find(t => t.id === taskId);
+                        if (task) {
+                            toggleTaskCompletion(task);
+                            break;
+                        }
+                    }
+                });
+            });
+        }
+
+        // 更新进度图表
+        function updateProgressChart() {
+            const ctx = document.getElementById('progress-chart').getContext('2d');
+            
+            const subjectData = subjects.map(subject => {
+                let totalTasks = 0;
+                let completedTasks = 0;
+                
+                tasks[subject.id].forEach(task => {
+                    totalTasks += task.total;
+                    completedTasks += task.completed;
+                });
+                
+                const progressPercentage = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+                
+                return {
+                    subject: subject.name,
+                    progress: progressPercentage,
+                    color: subject.color
+                };
+            });
+            
+            if (window.progressChart) {
+                window.progressChart.destroy();
+            }
+            
+            window.progressChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: subjectData.map(d => d.subject),
+                    datasets: [{
+                        label: '完成进度 (%)',
+                        data: subjectData.map(d => d.progress),
+                        backgroundColor: subjectData.map(d => d.color),
+                        borderColor: subjectData.map(d => d.color),
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            title: {
+                                display: true,
+                                text: '完成百分比 (%)'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // 初始化应用
+        document.addEventListener('DOMContentLoaded', function() {
+            // 创建日程安排
+            createSchedule();
+            
+            // 从本地存储加载数据
+            loadData();
+            
+            // 更新UI
+            updateCalendar();
+            updateTodayTasks();
+            updateSubjectsProgress();
+            updateDetailedSchedule();
+            updateProgressChart();
+            
+            // 刷新按钮点击事件
+            document.getElementById('refresh-btn').addEventListener('click', function() {
+                updateTodayTasks();
+            });
+            
+            // 学科筛选下拉菜单
+            const filterSubjectBtn = document.getElementById('filter-subject');
+            const subjectDropdown = document.getElementById('subject-dropdown');
+            const subjectOptions = document.getElementById('subject-options');
+            
+            subjects.forEach(subject => {
+                const option = document.createElement('a');
+                option.href = '#';
+                option.className = 'block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center';
+                option.innerHTML = `
+                    <span class="w-3 h-3 rounded-full mr-2" style="background-color: ${subject.color}"></span>
+                    ${subject.name}
+                `;
+                option.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    updateDetailedSchedule(subject.id);
+                    subjectDropdown.classList.add('hidden');
+                });
+                subjectOptions.appendChild(option);
+            });
+            
+            const allOption = document.createElement('a');
+            allOption.href = '#';
+            allOption.className = 'block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 font-medium';
+            allOption.textContent = '全部学科';
+            allOption.addEventListener('click', function(e) {
+                e.preventDefault();
+                updateDetailedSchedule();
+                subjectDropdown.classList.add('hidden');
+            });
+            subjectOptions.prepend(allOption);
+            
+            filterSubjectBtn.addEventListener('click', function() {
+                subjectDropdown.classList.toggle('hidden');
+            });
+            
+            document.addEventListener('click', function(e) {
+                if (!filterSubjectBtn.contains(e.target) && !subjectDropdown.contains(e.target)) {
+                    subjectDropdown.classList.add('hidden');
+                }
+            });
+            
+            document.getElementById('view-all').addEventListener('click', function() {
+                updateDetailedSchedule();
+            });
+            
+            // 周切换按钮
+            document.getElementById('prev-week').addEventListener('click', function() {
+                alert('第一周');
+            });
+            
+            document.getElementById('next-week').addEventListener('click', function() {
+                alert('第二周');
+            });
+        });
+    </script>
+</body>
+</html>
