@@ -46,6 +46,10 @@
             .calendar-day-completed {
                 @apply bg-secondary text-white;
             }
+            /* 适配手机端日历布局，避免重叠 */
+            #calendar-days {
+                @apply gap-1 md:gap-3;
+            }
             .task-card {
                 @apply p-3 rounded-lg border border-gray-200 shadow-sm transition-all duration-200 hover:shadow-md;
             }
